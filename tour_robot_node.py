@@ -20,7 +20,7 @@ class TourRobot(Node):
 
         # Set initial parameters
         self.user_position = user_position
-        self.dest_positions = dest_position
+        self.dest_position = dest_position
         self.robot_expression = robot_expression
 
         # Create a publisher for the /cmd_lightring topic
@@ -62,13 +62,16 @@ class TourRobot(Node):
         """Add Comments
         -------
         """
+    
         if(self.curr_state == self.state1):
                 
             # Wait for Nav2
             self.navigator.waitUntilNav2Active()
+
+            self.navigator.undock()
             
             # Set goal poses
-            goal_pose = []
+            # goal_pose = []
             # User position
             self.add_goal(self.user_position['x'], self.user_position['y'],self.user_position['direction'])
             # goal_pose.append(navigator.getPoseStamped([-3.058, -0.966], TurtleBot4Directions.NORTH))
@@ -78,7 +81,7 @@ class TourRobot(Node):
             self.robot_talker(robot_phrase='Hello, I\'m coming to you')
 
             # Follow Waypoints
-            navigator.startFollowWaypoints(goal_pose)
+            self.navigator.startFollowWaypoints(self.goal_pose)
 
             # Robot greets user and ask for their destination
             self.robot_talker(robot_phrase='Hello, my name is Turtlbot. I will escort you to your destination.')
@@ -94,20 +97,21 @@ class TourRobot(Node):
 
             # Advance to next state
             self.next_state = self.state2
+            
+
         elif(self.curr_state == self.state2):
             # Wait for Nav2
-            rclpy.init()
 
             # Initialize navigation object
-            navigator = TurtleBot4Navigator()
+            self.navigator = TurtleBot4Navigator()
 
             # Set goal poses
-            goal_pose = []
+            self.goal_pose = []
             # Destination1 position 
             self.add_goal(self.dest_position['x1'], self.dest_position['y1'],self.user_position['direction'])
 
             # Follow Waypoints
-            navigator.startFollowWaypoints(goal_pose)
+            self.navigator.startFollowWaypoints(self.goal_pose)
 
             # Robot alerts user that they reached destination
             self.robot_talker(robot_phrase='We have reached your destination. Have a good day.')
@@ -122,33 +126,37 @@ class TourRobot(Node):
 
             # Advance to next state
             self.next_state = self.state3
+
         elif(self.curr_state == self.state3):
             # Wait for Nav2
-            rclpy.init()
+            self.navigator = TurtleBot4Navigator()
 
             # Robot alerts user that it is departing
             self.robot_talker(robot_phrase='I am leaving to my docking station.')
 
             # Set goal poses
-            goal_pose = []
+            self.goal_pose = []
             # Destination1 position 
             self.add_goal(self.dest_position['x2'], self.dest_position['y2'],self.user_position['direction'])
             # goal_pose.append(navigator.getPoseStamped([-0.579, 0.004], TurtleBot4Directions.NORTH)) #THIS NEEDS TO BE CHANGED TO A NEW WAYPOINT AS CLOSE TO DOCK AS YOU CAN
 
             # Follow Waypoints
-            navigator.startFollowWaypoints(goal_pose)
+            self.navigator.startFollowWaypoints(self.goal_pose)
 
             # Finished navigating to docking station
-            navigator.dock()
+            self.navigator.dock()
 
             # Advance to next state
             self.next_state = self.state4
+
+
         elif(self.curr_state == self.state4):
             # Robot alerts user that it is done
             self.robot_talker(robot_phrase='My work is complete. Good day.')
             
             # End state machine
             self.next_state = None
+            
         # Advance to next state
         self.curr_state = self.next_state
 
@@ -257,7 +265,7 @@ class TourRobot(Node):
         # Play audio file with playsound library
         playsound.playsound(output_filename, True)
     
-    def move_robot(self, x=0.0, z=0.05, clockwise=True):
+    def move_robot(self, x=1.5, z=1.5, clockwise=True):
         """Move the robot using x and z velocities
         ----------
         x : float
@@ -270,12 +278,21 @@ class TourRobot(Node):
         -------
         None
         """
-        self.move_cmd.linear.x = float(x) # back or forward
-        if(clockwise):
-            self.move_cmd.angular.z = float(-z)
-        else:
-            self.move_cmd.angular.z = float(z)
-        self.movement_pub.publish(self.move_cmd)
+
+        self.move_cmd.linear.x = float(-x) # back or forward
+        # if(clockwise):
+        #     self.move_cmd.angular.z = float(-z)
+        # else:
+        #     self.move_cmd.angular.z = float(z)
+        while z < 5:
+            self.movement_pub.publish(self.move_cmd)
+            z += 0.5
+            if(clockwise):
+                self.move_cmd.angular.z = float(-z)
+            else:
+                self.move_cmd.angular.z = float(z)
+
+        self.move_cmd.linear.x = float(x)
         
     def add_goal(self, x, y, direction):
         '''`
@@ -290,12 +307,12 @@ def main():
     rclpy.init()
 
     # Set goal poses
-    user_position = {'x':0.66, 'y':-6.17, 'direction':TurtleBot4Directions.NORTH}
-    dest_position = {'x1':-2.98, 'y1':-4.6, 'direction1':TurtleBot4Directions.NORTH,
-                     'x2':1.80, 'y2':-0.01, 'direction2':TurtleBot4Directions.NORTH}
+    user_position = {'x':-0.03, 'y':-2.99, 'direction':TurtleBot4Directions.NORTH}
+    dest_position = {'x1':0.96, 'y1':-5.45, 'direction1':TurtleBot4Directions.NORTH,
+                     'x2':-0.02, 'y2':-0.94, 'direction2':TurtleBot4Directions.NORTH}
 
     # Set expressive behavior for robot. Options include gesture, lightring, or both
-    robot_expression = 'both' # 'gesture', 'lightring', 'both'
+    robot_expression = 'lightring' # 'gesture', 'lightring', 'both'
 
     # Intiialize tour robot
     tour_robot = TourRobot(user_position, dest_position, robot_expression)

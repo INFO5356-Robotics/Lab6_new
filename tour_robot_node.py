@@ -63,23 +63,9 @@ class TourRobot(Node):
         -------
         """
         if(self.curr_state == self.state1):
-            # Wait for Nav2
-            rclpy.init()
-
-            # Initialize navigation object
-            navigator = TurtleBot4Navigator()
-
-            # Start on dock
-            if not navigator.getDockedStatus():
-                navigator.info('Docking before intialising pose')
-                navigator.dock()
-
-            # Set initial pose
-            initial_pose = navigator.getPoseStamped([0.0, 0.0], TurtleBot4Directions.NORTH)
-            navigator.setInitialPose(initial_pose)
                 
             # Wait for Nav2
-            navigator.waitUntilNav2Active()
+            self.navigator.waitUntilNav2Active()
             
             # Set goal poses
             goal_pose = []
@@ -118,7 +104,7 @@ class TourRobot(Node):
             # Set goal poses
             goal_pose = []
             # Destination1 position 
-            goal_pose.append(navigator.getPoseStamped([-0.579, 0.004], TurtleBot4Directions.NORTH))
+            self.add_goal(self.dest_position['x1'], self.dest_position['y1'],self.user_position['direction'])
 
             # Follow Waypoints
             navigator.startFollowWaypoints(goal_pose)
@@ -146,7 +132,8 @@ class TourRobot(Node):
             # Set goal poses
             goal_pose = []
             # Destination1 position 
-            goal_pose.append(navigator.getPoseStamped([-0.579, 0.004], TurtleBot4Directions.NORTH)) #THIS NEEDS TO BE CHANGED TO A NEW WAYPOINT AS CLOSE TO DOCK AS YOU CAN
+            self.add_goal(self.dest_position['x2'], self.dest_position['y2'],self.user_position['direction'])
+            # goal_pose.append(navigator.getPoseStamped([-0.579, 0.004], TurtleBot4Directions.NORTH)) #THIS NEEDS TO BE CHANGED TO A NEW WAYPOINT AS CLOSE TO DOCK AS YOU CAN
 
             # Follow Waypoints
             navigator.startFollowWaypoints(goal_pose)
@@ -175,18 +162,20 @@ class TourRobot(Node):
         self.move_robot(clockwise=False)
 
     def generate_lightring_expression(self):
-        # Create a ROS2 message
-        lightring_msg = LightringLeds()
-        # Stamp the message with the current time
-        lightring_msg.header.stamp = self.get_clock().now().to_msg()
-
-        # Override system lights
-        lightring_msg.override_system = True
+       
 
         # Sequence count
         self.sequence_count = 2
 
         for seq_num in range(self.sequence_count):
+             # Create a ROS2 message
+            lightring_msg = LightringLeds()
+            # Stamp the message with the current time
+            lightring_msg.header.stamp = self.get_clock().now().to_msg()
+
+            # Override system lights
+            lightring_msg.override_system = True
+            
             # Alternate light on and off
             value = 255 if (seq_num % 2) == 1 else 0
             # LED 0
@@ -221,9 +210,15 @@ class TourRobot(Node):
 
             # Publish the message
             self.lightring_publisher.publish(lightring_msg)
-            time.sleep(0.1)
-            lightring_msg.override_system = False
+            time.sleep(1.0)
+
+
+        lightring_msg.override_system = False
+        self.lightring_publisher.publish(lightring_msg)
+
     
+
+
     def generate_gesture_lightring_expression(self):
         '''
         Generate both gesture and lightring expressions and 
@@ -295,9 +290,9 @@ def main():
     rclpy.init()
 
     # Set goal poses
-    user_position = {'x':-3.3, 'y':5.9, 'direction':TurtleBot4Directions.NORTH}
-    dest_position = {'x1':-1.0, 'y1':0.0, 'direction1':TurtleBot4Directions.NORTH,
-                     'x2':0.0, 'y2':0.0, 'direction2':TurtleBot4Directions.NORTH}
+    user_position = {'x':0.66, 'y':-6.17, 'direction':TurtleBot4Directions.NORTH}
+    dest_position = {'x1':-2.98, 'y1':-4.6, 'direction1':TurtleBot4Directions.NORTH,
+                     'x2':1.80, 'y2':-0.01, 'direction2':TurtleBot4Directions.NORTH}
 
     # Set expressive behavior for robot. Options include gesture, lightring, or both
     robot_expression = 'both' # 'gesture', 'lightring', 'both'
